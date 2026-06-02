@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma Digital — Amigão Supermercados</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e2e0d8;
+    --border2: #c8c6bc;
+    --text: #1a1a1a;
+    --text2: #666560;
+    --text3: #999790;
+    --blue-bg: #e8f0fe;
+    --blue-text: #1a56db;
+    --blue-border: #b3c8f8;
+    --green-bg: #ecfdf5;
+    --green-text: #065f46;
+    --red-text: #dc2626;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+  .header { background: #1a1a2e; color: #fff; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 16px; font-weight: 500; letter-spacing: .01em; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .conn-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
+  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #fbbf24; flex-shrink: 0; }
+  .conn-dot.ok { background: #34d399; }
+  .conn-dot.err { background: #f87171; }
+
+  .main { max-width: 1200px; margin: 0 auto; padding: 24px 24px; }
+
+  /* URL config */
+  .url-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .url-card label { font-size: 12px; font-weight: 500; color: var(--text2); white-space: nowrap; }
+  .url-card input { flex: 1; font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; font-family: monospace; }
+  .url-card input:focus { border-color: var(--blue-border); }
+
+  /* Counters */
+  .counters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+  .counter { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; transition: border-color .15s; text-align: center; }
+  .counter:hover, .counter.active { border-color: var(--blue-border); }
+  .counter .n { font-size: 24px; font-weight: 500; }
+  .counter .l { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+
+  /* Form */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; position: sticky; top: 20px; }
+  .form-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .field label .req { color: var(--red-text); }
+  .field select, .field input, .field textarea {
+    width: 100%; font-size: 13px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    outline: none; background: #fff; color: var(--text); font-family: inherit;
+  }
+  .field select:focus, .field input:focus, .field textarea:focus { border-color: var(--blue-border); }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+  .chip { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); cursor: pointer; background: #fff; color: var(--text2); transition: all .12s; user-select: none; }
+  .chip.on { background: var(--blue-bg); color: var(--blue-text); border-color: var(--blue-border); }
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+  .btn-add { flex: 1; padding: 9px; font-size: 13px; font-weight: 500; background: #1a1a2e; color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity .15s; }
+  .btn-add:hover { opacity: .88; }
+  .btn-add:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-clear { padding: 9px 14px; font-size: 13px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; color: var(--text2); }
+
+  /* Table panel */
+  .table-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-toolbar { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .table-toolbar-left { display: flex; align-items: center; gap: 10px; }
+  .table-toolbar h2 { font-size: 13px; font-weight: 500; }
+  .search-input { font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; width: 200px; }
+  .search-input:focus { border-color: var(--blue-border); }
+  .btn-export { font-size: 12px; padding: 6px 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+  .btn-export:hover { background: var(--bg); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+  th { padding: 9px 12px; text-align: left; font-weight: 500; font-size: 11px; color: var(--text2); white-space: nowrap; border-bottom: 1px solid var(--border); background: #fafaf8; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.45; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafaf8; }
+  .empty-row td { text-align: center; padding: 40px; color: var(--text3); }
+
+  .pill { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; cursor: pointer; white-space: nowrap; border: 1px solid transparent; }
+  .s-CRIAR     { background: #FFF3CD; color: #856404; border-color: #f0d060; }
+  .s-PROGRAMAR { background: #D1ECF1; color: #0C5460; border-color: #a8d8e0; }
+  .s-EM        { background: #CCE5FF; color: #004085; border-color: #99c8ff; }
+  .s-APROVADO  { background: #D4EDDA; color: #155724; border-color: #a8d8b4; }
+  .s-PUBLICADO { background: #E2E3E5; color: #383D41; border-color: #c8cacc; }
+  .s-CANCELADO { background: #F8D7DA; color: #721C24; border-color: #f0b0b8; }
+
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--text3); padding: 2px 5px; border-radius: 4px; font-size: 14px; line-height: 1; }
+  .del-btn:hover { color: var(--red-text); }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; right: 24px; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 100; }
+  #toast.show { opacity: 1; }
+  #toast.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  #toast.err { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #ddd; border-top-color: var(--blue-text); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 4px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .form-card { position: static; }
+    .counters { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📅 Cronograma Digital — Amigão Supermercados</h1>
+  <div class="header-right">
+    <div class="conn-pill">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-text">Verificando...</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- URL config -->
+  <div class="url-card">
+    <label>URL Apps Script</label>
+    <input type="text" id="script-url" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveUrl()">
+    <button onclick="testConnection()" style="padding:6px 14px;font-size:12px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap">Testar conexão</button>
+  </div>
+
+  <!-- Counters -->
+  <div class="counters">
+    <div class="counter" onclick="setFilter('')" id="cw-all"><div class="n" id="cnt-total">0</div><div class="l">Total</div></div>
+    <div class="counter" onclick="setFilter('CRIAR')" id="cw-criar"><div class="n" id="cnt-criar" style="color:#856404">0</div><div class="l">A criar</div></div>
+    <div class="counter" onclick="setFilter('PROGRAMAR')" id="cw-prog"><div class="n" id="cnt-prog" style="color:#0C5460">0</div><div class="l">A programar</div></div>
+    <div class="counter" onclick="setFilter('EM APROVAÇÃO')" id="cw-aprov"><div class="n" id="cnt-aprov" style="color:#004085">0</div><div class="l">Em aprovação</div></div>
+    <div class="counter" onclick="setFilter('PUBLICADO')" id="cw-pub"><div class="n" id="cnt-pub" style="color:#155724">0</div><div class="l">Publicadas</div></div>
+  </div>
+
+  <div class="layout">
+
+    <!-- Form -->
+    <div class="form-card">
+      <div class="form-title">Nova ação</div>
+
+      <div class="field">
+        <label>Status <span class="req">*</span></label>
+        <select id="f-status">
+          <option value="">Selecione</option>
+          <option>CRIAR</option><option>PROGRAMAR</option><option>EM APROVAÇÃO</option>
+          <option>APROVADO</option><option>PUBLICADO</option><option>CANCELADO</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field"><label>Data <span class="req">*</span></label><input type="date" id="f-data"></div>
+        <div class="field"><label>Horário</label><input type="time" id="f-hora"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label>Canal <span class="req">*</span></label>
+        <div class="chips" id="chips-canal">
+          <span class="chip" onclick="toggleChip(this,'canal')">META</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">WPP MASSIVO</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">WPP SEGMENTADO</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">TIKTOK</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">YOUTUBE</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">SMS</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">EMAIL MKT</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">PUSH APP</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">FEED APP</span>
+          <span class="chip" onclick="toggleChip(this,'canal')">VITRINE APP</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Veiculação</label>
+        <div class="chips" id="chips-veic">
+          <span class="chip" onclick="toggleChip(this,'veic')">DARK</span>
+          <span class="chip" onclick="toggleChip(this,'veic')">STORIES</span>
+          <span class="chip" onclick="toggleChip(this,'veic')">FEED</span>
+          <span class="chip" onclick="toggleChip(this,'veic')">DISPARO</span>
+          <span class="chip" onclick="toggleChip(this,'veic')">CARROSSEL</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label>Tipo <span class="req">*</span></label>
+        <select id="f-tipo"><option value="">Selecione</option><option>OFERTA</option><option>INSTITUCIONAL</option><option>ENGAJAMENTO</option></select>
+      </div>
+      <div class="field">
+        <label>Formato</label>
+        <div class="chips" id="chips-formato">
+          <span class="chip" onclick="toggleChip(this,'formato')">TOP</span>
+          <span class="chip" onclick="toggleChip(this,'formato')">IMG</span>
+          <span class="chip" onclick="toggleChip(this,'formato')">CARD</span>
+          <span class="chip" onclick="toggleChip(this,'formato')">REELS</span>
+          <span class="chip" onclick="toggleChip(this,'formato')">BANNER</span>
+          <span class="chip" onclick="toggleChip(this,'formato')">TEXTO</span>
+          <span class="chip" onclick="toggleChip(this,'formato')">COLLAB INFL</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Segmentação</label>
+        <select id="f-seg"><option>Todas as lojas</option><option>Lojas selecionadas</option><option>Custom Audience</option><option>Público abastecedor</option><option>Maringá e região</option></select>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label>Tema / Campanha</label>
+        <select id="f-tema">
+          <option value="">Selecione</option>
+          <option>EU ❤️ PRÊMIOS</option><option>SEMANA SUÍNA</option><option>SEGUNDA DA LIMPEZA</option>
+          <option>TQV + EU ❤️ PRÊMIOS</option><option>ALERTA DE OFERTAS</option><option>OFERTA RELÂMPAGO</option>
+          <option>RELÂMPAGO NOTURNA</option><option>+AMIGO COLECIONA</option><option>FESTIVAL FESTA JUNINA</option>
+          <option>DELÍCIAS DO AMIGÃO</option><option>FERIADÃO DO AMIGÃO</option><option>EU ❤️ BRASIL</option>
+          <option>ESPECIAL DIA DOS NAMORADOS</option><option>QUINTA DO ORGÂNICO</option><option>4ª CORRIDA AMIGÃO</option>
+          <option>RECUPERAÇÃO CLIENTES PERDIDOS</option><option>TRABALHE CONOSCO</option>
+          <option>ESPECIAL VINHOS E DESTILADOS</option><option>CHURRASCÃO DO AMIGÃO</option>
+          <option>LAMINA COOPERADA</option><option>Outro</option>
+        </select>
+      </div>
+      <div class="field"><label>Ação / Produto <span class="req">*</span></label><input type="text" id="f-acao" placeholder="Ex: FEIJÃO + FARINHA (Segunda)"></div>
+      <div class="field"><label>CTA</label><input type="text" id="f-cta" placeholder="Ex: NAS LOJAS E NO SITE"></div>
+      <div class="field"><label>Responsável</label><input type="text" id="f-resp" placeholder="Nome"></div>
+      <div class="field"><label>OBS e direcionamentos</label><textarea id="f-obs" placeholder="Instruções para o time de criação..."></textarea></div>
+
+      <div class="btn-row">
+        <button class="btn-clear" onclick="clearForm()">Limpar</button>
+        <button class="btn-add" id="btn-add" onclick="addRow()">+ Adicionar ação</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-panel">
+      <div class="table-toolbar">
+        <div class="table-toolbar-left">
+          <h2>Ações cadastradas</h2>
+          <input class="search-input" type="text" id="search" placeholder="Buscar..." oninput="renderTable()">
+        </div>
+        <button class="btn-export" onclick="exportCSV()">↓ Exportar CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th onclick="sortBy('status')">Status</th>
+            <th onclick="sortBy('data')">Data</th>
+            <th>Hora</th>
+            <th>Canal</th>
+            <th>Tipo</th>
+            <th>Tema</th>
+            <th onclick="sortBy('acao')">Ação / Produto</th>
+            <th>OBS</th>
+            <th>Resp.</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tbody">
+            <tr class="empty-row"><td colspan="10">Nenhuma ação cadastrada</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let rows = [];
+let filterStatus = '';
+let sortKey = 'data';
+let sortDir = 1;
+const chipState = { canal:[], veic:[], formato:[] };
+const STORAGE_KEY = 'amigao-rows-v2';
+
+// ── Init ──────────────────────────────────────────────────────
+function init() {
+  const savedUrl = localStorage.getItem('amigao-script-url') || '';
+  document.getElementById('script-url').value = savedUrl;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  rows = saved ? JSON.parse(saved) : [];
+  renderTable();
+  updateCounters();
+  if (savedUrl) testConnection(true);
+  else setConn('err', 'Cole a URL do Apps Script acima');
+}
+
+function saveUrl() {
+  const url = document.getElementById('script-url').value.trim();
+  localStorage.setItem('amigao-script-url', url);
+}
+
+function getUrl() { return document.getElementById('script-url').value.trim(); }
+
+// ── Conexão ───────────────────────────────────────────────────
+async function testConnection(silent) {
+  const url = getUrl();
+  if (!url) { setConn('err', 'URL não configurada'); return; }
+  setConn('loading', 'Conectando...');
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    const data = await res.json();
+    if (data.rows !== undefined) {
+      if (data.rows.length > 0) {
+        rows = data.rows.map(r => ({...r, id: r.id || Date.now() + Math.random()}));
+        saveLocal();
+        renderTable();
+        updateCounters();
+      }
+      setConn('ok', `Conectado — ${rows.length} ação(ões) na planilha`);
+    } else {
+      setConn('ok', 'Conectado ao Google Sheets');
+    }
+  } catch(e) {
+    setConn('err', 'Erro de conexão. Verifique a URL e as permissões do script.');
+    if (!silent) showToast('Erro: ' + e.message, 'err');
+  }
+}
+
+function setConn(type, msg) {
+  const dot = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  dot.className = 'conn-dot ' + (type === 'loading' ? '' : type);
+  if (type === 'loading') dot.style.background = '#fbbf24';
+  text.textContent = msg;
+}
+
+// ── Chips ─────────────────────────────────────────────────────
+function toggleChip(el, group) {
+  const val = el.textContent;
+  el.classList.toggle('on');
+  const arr = chipState[group];
+  const idx = arr.indexOf(val);
+  if (idx > -1) arr.splice(idx, 1); else arr.push(val);
+}
+function getChips(g) { return chipState[g].join('; '); }
+
+// ── Add row ───────────────────────────────────────────────────
+async function addRow() {
+  const status = document.getElementById('f-status').value;
+  const data   = document.getElementById('f-data').value;
+  const acao   = document.getElementById('f-acao').value.trim();
+  const tipo   = document.getElementById('f-tipo').value;
+  const canal  = getChips('canal');
+  if (!status) { showToast('Selecione o status', 'err'); return; }
+  if (!data)   { showToast('Informe a data', 'err'); return; }
+  if (!canal)  { showToast('Selecione ao menos um canal', 'err'); return; }
+  if (!tipo)   { showToast('Selecione o tipo', 'err'); return; }
+  if (!acao)   { showToast('Informe a ação / produto', 'err'); return; }
+
+  const btn = document.getElementById('btn-add');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Salvando...';
+
+  const tema = document.getElementById('f-tema').value;
+  const row = {
+    id: Date.now(),
+    status, data,
+    hora:    document.getElementById('f-hora').value,
+    canal,
+    veic:    getChips('veic'),
+    tipo,
+    formato: getChips('formato'),
+    tema:    tema === 'Outro' ? '' : tema,
+    acao,
+    seg:     document.getElementById('f-seg').value,
+    cta:     document.getElementById('f-cta').value.trim(),
+    obs:     document.getElementById('f-obs').value.trim(),
+    resp:    document.getElementById('f-resp').value.trim(),
+  };
+
+  rows.push(row);
+  saveLocal();
+  renderTable();
+  updateCounters();
+
+  const url = getUrl();
+  if (url) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', row })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast('✓ Salvo no Google Sheets!', 'ok');
+        setConn('ok', `Conectado — ${rows.length} ações`);
+      } else {
+        showToast('Salvo localmente. Erro no Sheets: ' + (result.error||''), 'err');
+      }
+    } catch(e) {
+      showToast('Salvo localmente (sem acesso ao Sheets)', 'err');
+    }
+  } else {
+    showToast('Salvo localmente', 'ok');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '+ Adicionar ação';
+  clearForm();
+}
+
+// ── Cycle status ──────────────────────────────────────────────
+async function cycleStatus(id) {
+  const order = ['CRIAR','PROGRAMAR','EM APROVAÇÃO','APROVADO','PUBLICADO','CANCELADO'];
+  const r = rows.find(r => r.id === id);
+  if (!r) return;
+  r.status = order[(order.indexOf(r.status) + 1) % order.length];
+  saveLocal();
+  renderTable();
+  updateCounters();
+  const url = getUrl();
+  if (url) {
+    try { await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'update', id, field:'status', value: r.status}) }); } catch(e){}
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────
+async function delRow(id) {
+  if (!confirm('Remover esta ação?')) return;
+  rows = rows.filter(r => r.id !== id);
+  saveLocal();
+  renderTable();
+  updateCounters();
+  showToast('Ação removida', 'ok');
+  const url = getUrl();
+  if (url) {
+    try { await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'delete', id}) }); } catch(e){}
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+function statusClass(s) {
+  const m = {'CRIAR':'s-CRIAR','PROGRAMAR':'s-PROGRAMAR','EM APROVAÇÃO':'s-EM','APROVADO':'s-APROVADO','PUBLICADO':'s-PUBLICADO','CANCELADO':'s-CANCELADO'};
+  return m[s] || 's-CRIAR';
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}`;
+}
+function setFilter(s) {
+  filterStatus = s;
+  document.querySelectorAll('.counter').forEach(c => c.classList.remove('active'));
+  const map = {'':'cw-all','CRIAR':'cw-criar','PROGRAMAR':'cw-prog','EM APROVAÇÃO':'cw-aprov','PUBLICADO':'cw-pub'};
+  if (map[s]) document.getElementById(map[s])?.classList.add('active');
+  renderTable();
+}
+function sortBy(k) {
+  if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+  renderTable();
+}
+function renderTable() {
+  const q = (document.getElementById('search')?.value || '').toLowerCase();
+  let list = rows.filter(r => {
+    if (filterStatus && r.status !== filterStatus) return false;
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b) => (a[sortKey]||'').localeCompare(b[sortKey]||'') * sortDir);
+
+  const tb = document.getElementById('tbody');
+  if (!list.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="10">${rows.length ? 'Nenhum resultado para este filtro' : 'Nenhuma ação cadastrada ainda'}</td></tr>`;
+    return;
+  }
+  tb.innerHTML = list.map(r => `
+    <tr>
+      <td><span class="pill ${statusClass(r.status)}" onclick="cycleStatus(${r.id})" title="Clique para avançar o status">${r.status}</span></td>
+      <td style="white-space:nowrap;font-weight:500">${fmtDate(r.data)}</td>
+      <td style="color:#999;white-space:nowrap">${r.hora}</td>
+      <td style="max-width:130px;font-size:11px;color:#666">${r.canal}</td>
+      <td style="white-space:nowrap">${r.tipo}</td>
+      <td style="max-width:110px;font-size:11px">${r.tema}</td>
+      <td style="max-width:160px;font-weight:500">${r.acao}</td>
+      <td style="max-width:150px;font-size:11px;color:#666">${r.obs}</td>
+      <td style="font-size:11px">${r.resp}</td>
+      <td><button class="del-btn" onclick="delRow(${r.id})" title="Remover">✕</button></td>
+    </tr>`).join('');
+}
+function updateCounters() {
+  document.getElementById('cnt-total').textContent = rows.length;
+  document.getElementById('cnt-criar').textContent = rows.filter(r=>r.status==='CRIAR').length;
+  document.getElementById('cnt-prog').textContent  = rows.filter(r=>r.status==='PROGRAMAR').length;
+  document.getElementById('cnt-aprov').textContent = rows.filter(r=>r.status==='EM APROVAÇÃO').length;
+  document.getElementById('cnt-pub').textContent   = rows.filter(r=>['APROVADO','PUBLICADO'].includes(r.status)).length;
+}
+function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); }
+function clearForm() {
+  ['f-status','f-tipo','f-tema'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['f-data','f-hora','f-acao','f-cta','f-obs','f-resp'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.querySelectorAll('.chip.on').forEach(c => c.classList.remove('on'));
+  chipState.canal=[]; chipState.veic=[]; chipState.formato=[];
+}
+function exportCSV() {
+  if (!rows.length) { showToast('Nenhuma ação para exportar', 'err'); return; }
+  const h = ['STATUS','DATA','HORÁRIO','CANAL','VEICULAÇÃO','TIPO','FORMATO','TEMA','AÇÃO / PRODUTO','SEGMENTAÇÃO','CTA','OBS E DIRECIONAMENTOS','RESPONSÁVEL'];
+  const esc = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+  const sorted = [...rows].sort((a,b) => a.data.localeCompare(b.data));
+  const lines = [h.map(esc).join(','), ...sorted.map(r => [r.status,r.data,r.hora,r.canal,r.veic,r.tipo,r.formato,r.tema,r.acao,r.seg,r.cta,r.obs,r.resp].map(esc).join(','))];
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cronograma_amigao.csv'; a.click();
+}
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => t.className = type, 2800);
+}
+
+init();
+</script>
+</body>
+</html>
